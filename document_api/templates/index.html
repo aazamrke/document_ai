@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Document Upload & AI Modification</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .section h2 {
+            color: #374151;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f8fafc;
+        }
+        input[type="file"] { display: none; }
+        .btn {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-secondary { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: none;
+            height: 100px;
+            margin: 10px 0;
+            transition: border-color 0.3s ease;
+            overflow-y: auto;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        textarea.typing-timeout {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+        .document-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .document-item:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-processing { background: #dbeafe; color: #1e40af; }
+        .status-completed { background: #d1fae5; color: #065f46; }
+        .status-modifying { background: #e0e7ff; color: #3730a3; }
+        .status-modified { background: #dcfce7; color: #166534; }
+        .status-no_changes { background: #f3f4f6; color: #374151; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+        }
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-file-alt"></i> Document AI Assistant</h1>
+            <p>Upload, analyze, and modify documents with AI-powered intelligence</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Upload Document</h2>
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #9ca3af; margin-bottom: 15px;"></i>
+                    <p style="font-size: 1.2rem; color: #6b7280; margin-bottom: 10px;">Click to upload or drag and drop</p>
+                    <p style="color: #9ca3af;">PDF, DOC, DOCX files only (Max 10MB)</p>
+                </div>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx" required onchange="showSelectedFile()">
+                    <div id="selectedFile" style="margin: 15px 0; padding: 10px; background: #f3f4f6; border-radius: 8px; display: none;">
+                        <i class="fas fa-file-alt"></i> <span id="fileName"></span>
+                        <span id="fileSize" style="color: #6b7280; margin-left: 10px;"></span>
+                    </div>
+                    <button type="submit" class="btn" style="margin-top: 15px;">
+                        <i class="fas fa-upload"></i> Upload Document
+                    </button>
+                </form>
+                <div id="uploadStatus"></div>
+            </div>
+
+            <div class="section">
+                <h2><i class="fas fa-folder-open"></i> My Documents</h2>
+                <button onclick="loadDocuments()" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Refresh Documents
+                </button>
+                <div id="documentsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let documentStatuses = {};
+        let typingTimers = {};
+        
+        let textareaValues = {};
+        
+        // Auto-refresh every 30 seconds (reduced frequency)
+        setInterval(() => {
+            // Save textarea values before refresh
+            document.querySelectorAll('textarea[id^="guidelines-"]').forEach(textarea => {
+                textareaValues[textarea.id] = textarea.value;
+            });
+            loadDocuments();
+        }, 30000);
+        
+
+        
+        document.getElementById('uploadForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const fileInput = document.getElementById('fileInput');
+            
+            if (!fileInput.files[0]) {
+                showAlert('Please select a file to upload', 'error');
+                return;
+            }
+            
+            formData.append('file', fileInput.files[0]);
+            
+            try {
+                showAlert('Uploading document...', 'info');
+                const response = await fetch(`${API_BASE}/upload/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('✅ Document uploaded successfully!', 'success');
+                    fileInput.value = '';
+                    loadDocuments();
+                } else {
+                    showAlert('❌ Upload failed: ' + JSON.stringify(result), 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Upload error: ' + error.message, 'error');
+            }
+        };
+
+        async function loadDocuments() {
+            try {
+                const response = await fetch(`${API_BASE}/documents/`);
+                const docs = await response.json();
+                const container = document.getElementById('documentsList');
+                
+                if (docs.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 40px;">No documents uploaded yet.</p>';
+                    return;
+                }
+                
+                // Check for status changes
+                docs.forEach(doc => {
+                    if (documentStatuses[doc.id] && documentStatuses[doc.id] !== doc.status) {
+                        showAlert(`📄 Document "${doc.original_filename}" status changed to: ${doc.status}`, 'info');
+                    }
+                    documentStatuses[doc.id] = doc.status;
+                });
+            
+                container.innerHTML = docs.map(doc => `
+                    <div class="document-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="color: #374151; font-size: 1.2rem;">
+                                <i class="fas fa-file-alt"></i> ${doc.original_filename}
+                            </h4>
+                            <span class="status-badge status-${doc.status}">${doc.status}</span>
+                        </div>
+                        <p style="color: #6b7280; margin-bottom: 15px;">
+                            <i class="fas fa-calendar"></i> Uploaded: ${new Date(doc.uploaded_at).toLocaleString()}
+                        </p>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <textarea id="guidelines-${doc.id}" placeholder="Enter modification guidelines (e.g., 'Make it more formal and concise')..."></textarea>
+                            <div id="timer-${doc.id}" style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;"></div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button onclick="modifyDocument('${doc.id}')" class="btn" ${doc.status === 'modifying' ? 'disabled' : ''}>
+                                ${doc.status === 'modifying' ? '<div class="loading"></div> Processing...' : '<i class="fas fa-robot"></i> AI Modify'}
+                            </button>
+                            <button onclick="checkStatus('${doc.id}')" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> Check Status
+                            </button>
+                            ${doc.modified_file ? `<button onclick="downloadModified('${doc.id}')" class="btn btn-success">
+                                <i class="fas fa-download"></i> Download Modified
+                            </button>` : ''}
+                        </div>
+                        <div id="status-${doc.id}"></div>
+                    </div>
+                `).join('');
+                
+                // Restore textarea values after DOM update
+                setTimeout(() => {
+                    Object.keys(textareaValues).forEach(textareaId => {
+                        const textarea = document.getElementById(textareaId);
+                        if (textarea && textareaValues[textareaId]) {
+                            textarea.value = textareaValues[textareaId];
+                        }
+                    });
+                }, 100);
+            } catch (error) {
+                document.getElementById('documentsList').innerHTML = 
+                    '<div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i>Error loading documents: ' + error.message + '</div>';
+            }
+        }
+
+        async function modifyDocument(docId) {
+            const guidelines = document.getElementById(`guidelines-${docId}`).value;
+            if (!guidelines) {
+                showAlert('Please enter modification guidelines', 'error');
+                return;
+            }
+            
+            // Show processing indicator
+            const statusDiv = document.getElementById(`status-${docId}`);
+            statusDiv.innerHTML = `
+                <div class="alert alert-info">
+                    <div class="loading"></div>
+                    🤖 AI is analyzing and modifying your document...
+                </div>
+            `;
+            
+            // Disable modify button
+            const modifyBtn = event.target;
+            modifyBtn.disabled = true;
+            modifyBtn.innerHTML = '<div class="loading"></div> Processing...';
+            
+            try {
+                showAlert('🤖 Requesting AI modification...', 'info');
+                const response = await fetch(`${API_BASE}/modify/${docId}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guidelines })
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('✅ AI modification requested successfully!', 'success');
+                    statusDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            Modification request submitted! Processing in background...
+                        </div>
+                    `;
+                    loadDocuments();
+                } else {
+                    showAlert('❌ Modification failed: ' + JSON.stringify(result), 'error');
+                    statusDiv.innerHTML = '';
+                    modifyBtn.disabled = false;
+                    modifyBtn.innerHTML = '<i class="fas fa-robot"></i> AI Modify';
+                }
+            } catch (error) {
+                showAlert('❌ Error: ' + error.message, 'error');
+                statusDiv.innerHTML = '';
+                modifyBtn.disabled = false;
+                modifyBtn.innerHTML = '<i class="fas fa-robot"></i> AI Modify';
+            }
+        }
+
+        async function checkStatus(docId) {
+            try {
+                showAlert('🔄 Checking status...', 'info');
+                const response = await fetch(`${API_BASE}/status/${docId}/`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const doc = await response.json();
+                showAlert(`📊 Current status: ${doc.status}`, 'success');
+                
+                // Force refresh documents list
+                setTimeout(() => {
+                    loadDocuments();
+                }, 500);
+                
+            } catch (error) {
+                console.error('Status check error:', error);
+                showAlert('❌ Status check failed: ' + error.message, 'error');
+            }
+        }
+
+        async function downloadModified(docId) {
+            try {
+                const response = await fetch(`${API_BASE}/download/${docId}/`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    
+                    // Get filename from response headers or use default
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `modified_document_${docId}.pdf`; // Default to PDF
+                    
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="(.+)"/); 
+                        if (filenameMatch) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    
+                    a.download = filename;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showAlert('📥 Download started!', 'success');
+                } else {
+                    showAlert('❌ Download failed', 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Download error: ' + error.message, 'error');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>${message}`;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 4000);
+        }
+
+        // Drag and drop functionality
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                showSelectedFile();
+            }
+        });
+
+        function showSelectedFile() {
+            const fileInput = document.getElementById('fileInput');
+            const selectedFileDiv = document.getElementById('selectedFile');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileName.textContent = file.name;
+                fileSize.textContent = `(${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                selectedFileDiv.style.display = 'block';
+            } else {
+                selectedFileDiv.style.display = 'none';
+            }
+        }
+        
+        // Load documents on page load
+        loadDocuments();
+    </script>
+</body>
+</html>
