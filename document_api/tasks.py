@@ -86,6 +86,30 @@ def modify_document(document_id, guidelines):
         logger.error(f"Failed to modify document {document_id}: {str(e)}")
         raise
 
+def process_document_sync(document_id):
+    """
+    Synchronous document processing
+    """
+    try:
+        document = Document.objects.get(id=document_id)
+        document.status = 'processing'
+        document.save()
+        
+        # Simple processing without file extraction
+        document.status = 'completed'
+        document.processed_at = timezone.now()
+        document.save()
+        
+        logger.info(f"Document {document_id} processed successfully")
+        return {'status': 'completed'}
+        
+    except Exception as e:
+        document = Document.objects.get(id=document_id)
+        document.status = 'failed'
+        document.save()
+        logger.error(f"Failed to process document {document_id}: {str(e)}")
+        raise
+
 @shared_task
 def process_document(document_id):
     """

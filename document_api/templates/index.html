@@ -192,7 +192,13 @@
                         <i class="fas fa-file-alt"></i> <span id="fileName"></span>
                         <span id="fileSize" style="color: #6b7280; margin-left: 10px;"></span>
                     </div>
-                    <button type="submit" class="btn" style="margin-top: 15px;">
+                    <div id="progressContainer" style="margin: 15px 0; display: none;">
+                        <div style="background: #e5e7eb; border-radius: 10px; height: 8px; overflow: hidden;">
+                            <div id="progressBar" style="background: linear-gradient(135deg, #4f46e5, #7c3aed); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="progressText" style="text-align: center; margin-top: 5px; font-size: 0.9rem; color: #6b7280;">Uploading...</div>
+                    </div>
+                    <button type="submit" class="btn" id="uploadBtn" style="margin-top: 15px;">
                         <i class="fas fa-upload"></i> Upload Document
                     </button>
                 </form>
@@ -231,6 +237,10 @@
             e.preventDefault();
             const formData = new FormData();
             const fileInput = document.getElementById('fileInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
             
             if (!fileInput.files[0]) {
                 showAlert('Please select a file to upload', 'error');
@@ -239,23 +249,67 @@
             
             formData.append('file', fileInput.files[0]);
             
+            // Show progress bar and disable button
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<div class="loading"></div> Uploading...';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+            progressText.textContent = 'Uploading... 10%';
+            
             try {
-                showAlert('Uploading document...', 'info');
+                // Update progress to 50% when starting request
+                progressBar.style.width = '50%';
+                progressText.textContent = 'Processing... 50%';
+                
                 const response = await fetch(`${API_BASE}/upload/`, {
                     method: 'POST',
                     body: formData
                 });
+                
+                // Update progress to 80% when response received
+                progressBar.style.width = '80%';
+                progressText.textContent = 'Finalizing... 80%';
+                
                 const result = await response.json();
                 
-                if (response.ok) {
-                    showAlert('✅ Document uploaded successfully!', 'success');
-                    fileInput.value = '';
-                    loadDocuments();
-                } else {
-                    showAlert('❌ Upload failed: ' + JSON.stringify(result), 'error');
-                }
+                // Complete progress
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+                
+                // Wait briefly to show 100% completion
+                setTimeout(() => {
+                    if (response.ok) {
+                        showAlert('✅ Document uploaded successfully!', 'success');
+                        fileInput.value = '';
+                        document.getElementById('selectedFile').style.display = 'none';
+                        loadDocuments();
+                    } else {
+                        showAlert('❌ Upload failed: ' + JSON.stringify(result), 'error');
+                    }
+                    
+                    // Reset UI after showing completion
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Document';
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 800);
+                
             } catch (error) {
                 showAlert('❌ Upload error: ' + error.message, 'error');
+                
+                // Reset UI immediately on error
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Document';
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+            } finally {
+                // Ensure UI is always reset after 5 seconds as failsafe
+                setTimeout(() => {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Upload Document';
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 5000);
             }
         };
 
