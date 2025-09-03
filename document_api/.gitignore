@@ -1,6 +1,7 @@
 *.pyc
 *.pdf
 *.docx
+*.doc
 mdeia/
 media/documents/
 media/documents/modified/
